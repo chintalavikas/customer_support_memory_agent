@@ -1,633 +1,115 @@
-# 🧠 Customer Support Memory Agent
+# Customer Support Memory Agent
 
-### AI-powered customer support that remembers the customer.
+A support agent for a fictional SaaS product (CloudDesk) that remembers each customer between conversations. It uses [Hindsight](https://github.com/vectorize-io/hindsight) for long-term memory, Groq for generation, and Streamlit for the console.
 
-A personalized customer-support agent for **CloudDesk** that uses **Hindsight long-term memory** to recall previous issues, successful fixes, customer preferences, and confirmed outcomes.
+> **Same agent. Same model. Same message. The difference is memory.**
 
-Instead of starting every conversation from zero, the agent can use relevant customer history to provide more personalized and context-aware support.
+## The idea
 
-> **Recall → Answer → Retain**
-
----
-
-## 🚀 Why This Project?
-
-Traditional AI customer-support agents often treat every conversation as a new interaction.
-
-Customers may have to repeatedly explain:
-
-* Who they are
-* What problem they are facing
-* What they already tried
-* Which solution worked previously
-* How they prefer to receive support
-
-Our goal is to make the support experience more personalized by giving the AI **persistent, customer-specific memory**.
-
----
-
-# 💡 Our Solution
-
-The **Customer Support Memory Agent** retrieves relevant memories about the active customer before generating a response.
-
-For example, Priya previously experienced an export timeout in January. A chunked-export solution fixed the issue.
-
-Months later, she says:
-
-> **"My export is failing again with a timeout error."**
-
-Instead of giving completely generic troubleshooting, the agent can recall her previous issue and the successful solution.
-
-The system follows three main steps:
+Most support bots start every chat from zero, so customers re-explain their setup, their history, and what already failed. This agent keeps one memory bank per customer and does three things on every message:
 
 ```text
-                 ┌──────────────────┐
-                 │  Customer Message│
-                 └────────┬─────────┘
-                          │
-                          ▼
-                 ┌──────────────────┐
-                 │      RECALL      │
-                 │                  │
-                 │ Retrieve relevant│
-                 │ customer memories│
-                 └────────┬─────────┘
-                          │
-                          ▼
-                 ┌──────────────────┐
-                 │      ANSWER      │
-                 │                  │
-                 │ LLM + current    │
-                 │ message + memory │
-                 └────────┬─────────┘
-                          │
-                          ▼
-                 ┌──────────────────┐
-                 │     RETAIN       │
-                 │                  │
-                 │ Save new useful  │
-                 │ interaction      │
-                 └──────────────────┘
+customer message → RECALL relevant memories → ANSWER with them in context → RETAIN the exchange
 ```
 
----
+Example: in January, Priya's 50,000-row CSV export timed out and switching to chunked export fixed it. Months later she writes:
 
-# 🧠 How Hindsight Memory Works
+> My export is failing again with a timeout error.
 
-Hindsight acts as the **long-term memory layer** for the support agent.
+| Memory OFF | Memory ON |
+| --- | --- |
+| Generic checklist: retry, check your connection, shrink the date range. | Leads with the chunked-export fix that worked before, says it looks like the same issue, and keeps the reply short and technical, as her profile asks. |
 
-At the application level, the system primarily uses two memory operations:
+The console has a sidebar toggle so you can send the same message both ways.
 
-### `recall`
+## How it works
 
-The agent asks:
+All of the memory logic lives in `agent.py`.
 
-> "What do I already know about this customer that is relevant to their current message?"
+- **One bank per customer.** Every read and write goes through `bank_for(customer_id)` (`cust-<id>`). There is no code path that recalls without naming a bank, so customer A's history can't appear in customer B's prompt.
+- **Recall.** `hs.recall(...)` is queried with the customer's raw message (`budget="mid"`, `max_tokens=2048`). Results are added to the system prompt with rules: never re-ask known information, lead with a past fix that applies, match the customer's communication style.
+- **Retain.** Each exchange is stored with `context="support conversation"`.
+- **Confirmed outcomes.** "Mark resolved" stores what actually worked with `context="ticket resolution"`. This is a separate write path on purpose: the agent's own replies are guesses, while a resolution is something a human confirmed.
+- **Transparency.** Every reply has a "Recalled N memories" expander showing exactly what was retrieved.
 
-Hindsight retrieves relevant memories.
+## Quick start
 
-### `retain`
-
-After the interaction, useful information can be stored so that it can be available in future conversations.
-
-Therefore:
-
-```text
-New message
-     ↓
-   recall
-     ↓
-Relevant memories
-     ↓
-Groq LLM
-     ↓
-Personalized response
-     ↓
-  retain
-     ↓
-Updated memory
-```
-
----
-
-# 👥 Customer-Specific Memory
-
-Each customer has their own history and preferences.
-
-## 👩 Priya Nair
-
-Example memories:
-
-* Previous export timeout
-* Chunked export solution
-* Duplicate billing charge
-* Billing confirmation preference
-* Nightly synchronization issue
-* 429 error troubleshooting
-
-When Priya reports a similar issue, the agent can retrieve relevant information from her history.
-
----
-
-## 👨 Rahul Mehta
-
-Example memories:
-
-* Mobile login problem
-* Keychain-related fix
-* Preference for step-by-step instructions
-
-The agent can use this information to make its response more suitable for Rahul.
-
----
-
-## 👩 Ananya Rao
-
-Example memories:
-
-* Okta → CloudDesk SCIM synchronization delay
-* SSO certificate issue
-* Preference for regular status updates
-
-The same AI agent can therefore behave differently depending on the customer and their history.
-
----
-
-# 🔥 Memory OFF vs Memory ON
-
-One of the main demonstrations of this project is comparing the agent with and without memory.
-
-## Without Memory
-
-Customer:
-
-**Priya Nair**
-
-Message:
-
-```text
-My export is failing again with a timeout error.
-```
-
-Without customer memory, the agent does not have access to Priya's previous export issue.
-
-The response can therefore be generic troubleshooting.
-
----
-
-## With Memory
-
-Now enable memory and send the **exact same message**:
-
-```text
-My export is failing again with a timeout error.
-```
-
-The agent can recall Priya's previous export issue and the successful chunked-export solution.
-
-The response can therefore be more personalized and relevant.
-
-### The key idea:
-
-> **Same agent. Same model. Same question. The difference is memory.**
-
----
-
-# 🔍 Recalled Memories
-
-The application provides a **Recalled Memories** section so the user can inspect the information retrieved for a response.
-
-This provides transparency into why the agent was able to personalize its answer.
-
-Example flow:
-
-```text
-Customer message
-       ↓
-Relevant memories retrieved
-       ↓
-Memories provided as context
-       ↓
-LLM generates response
-```
-
----
-
-# 📈 Learning Through Confirmed Outcomes
-
-The system does not retrain the language model.
-
-Instead, it improves future support interactions by retaining useful information from previous conversations.
-
-For example:
-
-```text
-Customer:
-"Export is timing out again."
-
-        ↓
-
-Agent:
-"Try the chunked export solution."
-
-        ↓
-
-Customer:
-"The fix worked."
-
-        ↓
-
-Mark as resolved
-
-        ↓
-
-Confirmed outcome becomes useful
-for future conversations
-```
-
-Later, the customer can ask:
-
-```text
-What have we already tried for my export issue?
-```
-
-The agent can retrieve the previous interaction and confirmed outcome from memory.
-
----
-
-# ✨ Key Features
-
-* 🧠 **Long-term customer memory**
-* 🔍 **Relevant memory retrieval**
-* 👤 **Customer-specific memory**
-* 🎯 **Personalized responses**
-* 🛠️ **Previous solution recall**
-* 💬 **Context-aware conversations**
-* ✅ **Confirmed outcome tracking**
-* 🔄 **Memory retention after interactions**
-* 👥 **Customer-specific preferences**
-* 🔎 **Recalled Memories transparency**
-* ⚡ **Interactive Streamlit interface**
-
----
-
-# 🎬 Demo Walkthrough
-
-The recommended demonstration follows this flow.
-
-### 1. Select Priya Nair
-
-Turn **Hindsight memory OFF**.
-
-Send:
-
-```text
-My export is failing again with a timeout error.
-```
-
-Observe the generic response.
-
----
-
-### 2. Enable Hindsight Memory
-
-Turn memory **ON**.
-
-Send the exact same message:
-
-```text
-My export is failing again with a timeout error.
-```
-
-The agent can now retrieve Priya's previous export-related memory.
-
-Open the **Recalled Memories** section to show the retrieved context.
-
----
-
-### 3. Show another memory
-
-Ask Priya:
-
-```text
-I also see a duplicate charge on this month's invoice.
-```
-
-The agent can recall the previous duplicate-charge issue and relevant billing preference.
-
----
-
-### 4. Show customer personalization
-
-Switch to Rahul and ask:
-
-```text
-I can't log in on my phone again, it just keeps looping.
-```
-
-The agent can use Rahul's previous mobile-login history and communication preference.
-
----
-
-### 5. Show confirmed learning
-
-With Priya:
-
-```text
-Export is timing out again.
-```
-
-Confirm that the solution worked and use **Mark Resolved**.
-
-Later ask:
-
-```text
-What have we already tried for my export issue?
-```
-
-The agent can retrieve the previous interaction and confirmed outcome.
-
----
-
-# 🛠️ Technology Stack
-
-| Technology                 | Purpose                                    |
-| -------------------------- | ------------------------------------------ |
-| **Python**                 | Application and agent logic                |
-| **Streamlit**              | Interactive user interface                 |
-| **Groq**                   | Large language model / response generation |
-| **Hindsight by Vectorize** | Long-term memory, recall and retention     |
-| **Git / GitHub**           | Version control and source code            |
-
----
-
-# 📂 Project Structure
-
-```text
-customer_support_memory_agent/
-│
-├── app.py
-│       └── Streamlit application and user interface
-│
-├── agent.py
-│       └── Customer-support agent and memory orchestration
-│
-├── seed_data.py
-│       └── Synthetic customer profiles and historical data
-│
-├── seed.py
-│       └── Loads initial customer information into memory
-│
-├── requirements.txt
-│       └── Python dependencies
-│
-├── .gitignore
-│       └── Files and secrets excluded from Git
-│
-└── README.md
-        └── Project documentation
-```
-
----
-
-# ⚙️ Installation
-
-## 1. Clone the repository
+**Prerequisites:** Python 3.10+, a [Groq](https://console.groq.com) API key, and a [Hindsight](https://hindsight.vectorize.io/) API key.
 
 ```bash
 git clone https://github.com/chintalavikas/customer_support_memory_agent.git
-```
-
-## 2. Enter the project directory
-
-```bash
 cd customer_support_memory_agent
-```
-
-## 3. Install dependencies
-
-```bash
 python -m pip install -r requirements.txt
 ```
 
-If your system uses the `py` launcher:
-
-```bash
-py -m pip install -r requirements.txt
-```
-
----
-
-# 🔐 Environment Variables
-
-API keys and other secrets should **never be committed to GitHub**.
-
-Store required credentials in environment variables or a local `.env` file according to the application's configuration.
-
-Example:
+Create a `.env` file in the project root:
 
 ```text
 GROQ_API_KEY=your_groq_api_key
 HINDSIGHT_API_KEY=your_hindsight_api_key
+# Optional: defaults to https://api.hindsight.vectorize.io
+# HINDSIGHT_URL=
 ```
 
-> Never replace the placeholder values with real API keys inside this README.
-
-Make sure `.env` is included in `.gitignore`.
-
----
-
-# ▶️ Run the Application
-
-Start the Streamlit application with:
+Seed the sample customers, then start the app. **Seeding is required**: without it the banks are empty and memory ON will look identical to memory OFF.
 
 ```bash
+python seed.py
 streamlit run app.py
 ```
 
-Then open the local URL provided by Streamlit in your browser.
+Run `seed.py` once per fresh setup rather than repeatedly.
 
----
+## Try it
 
-# 🌱 Initial Customer Data
+Pick a customer in the sidebar. The sidebar also shows a suggested first message for each.
 
-The project includes synthetic customer data for demonstration.
+| Customer | Profile | Suggested message | What memory adds |
+| --- | --- | --- | --- |
+| Priya Nair | Ops lead, Pro plan, REST API user; prefers short, technical answers | "My export is failing again with a timeout error." | Past chunked-export fix, rate-limit history, and her request for email confirmation on billing fixes |
+| Rahul Mehta | Starter plan, iOS app; new to the product | "I can't log in on my phone again, it just keeps looping." | Past Keychain fix and step-by-step instructions with exact menu names |
+| Ananya Rao | IT admin, Enterprise with 4-hour SLA, Okta SSO | "New hires aren't showing up in CloudDesk after we add them in Okta." | Past SCIM delay and SSO certificate issue, and her request for proactive status updates |
 
-The seed process prepares customer profiles and previous support interactions so that the memory system has useful history before the demo begins.
+A good walkthrough:
 
-Example customers include:
+1. Choose Priya, turn **Use Hindsight memory** off, and send her message. Note the generic answer.
+2. Turn memory on, send the same message, and open **Recalled memories** to see what was retrieved.
+3. Ask, "I also see a duplicate charge on this month's invoice." The billing history and her confirmation preference should surface.
+4. Click **Mark resolved** after a fix works, then later ask, "What have we already tried for my export issue?"
 
-* Priya Nair
-* Rahul Mehta
-* Ananya Rao
+All customer data is synthetic (`seed_data.py`).
 
-> **The customer data is fictional and does not represent real users.**
-
----
-
-# 🔒 Privacy & Data
-
-This project uses **synthetic customer data** created specifically for demonstration and hackathon purposes.
-
-No real customer information is required for the demo.
-
-In a production deployment, additional controls would be required for:
-
-* Authentication
-* Authorization
-* Data encryption
-* Memory isolation
-* Data retention
-* Memory deletion
-* Audit logging
-* Sensitive information handling
-
----
-
-# ⚠️ Current Limitations
-
-The current prototype has several limitations:
-
-* Customer data is synthetic.
-* Generated responses may occasionally be incorrect.
-* The quality of future responses depends on the quality of retained memories.
-* Outdated memories may require cleanup or expiration.
-* Production deployments would require stronger security and data-governance controls.
-* Human review would be useful for sensitive or unresolved support cases.
-
----
-
-# 🚀 Future Scope
-
-## 🌐 Shared Support Knowledge
-
-Create a separate organization-wide support memory/playbook.
-
-For example:
+## Project layout
 
 ```text
-Customer A
-    │
-    └── Export timeout
-             │
-             └── Chunked export worked
-                         │
-                         ▼
-                 Shared Support Playbook
-                         │
-                         ▼
-Customer B → Same problem → Proven solution
+agent.py       Recall → answer → retain loop, bank setup, LLM call with retries
+app.py         Streamlit console: customer picker, memory toggle, Mark resolved
+seed.py        Loads each customer's profile and dated ticket history into memory
+seed_data.py   Synthetic customers, tickets, and suggested messages
 ```
 
-This would allow successful troubleshooting knowledge to help new customers while keeping personal customer memories isolated.
+## Limitations
 
----
+- **Single-turn prompts.** Each LLM call sees the current message plus recalled memories, not the earlier turns of the current chat.
+- **Unverified agent replies.** Retained exchanges include the model's own answers. Only "Mark resolved" records a confirmed fix, and the two are not yet weighted differently in the prompt.
+- **Broad error handling.** `ensure_bank` swallows all exceptions so setup can be re-run, which can also hide a bad key or unreachable server.
+- **No memory maintenance.** There is no expiry or cleanup for outdated memories.
+- **No production controls.** Authentication, authorization, audit logging, retention policy, and deletion workflows are out of scope for this repo.
+- **No evaluation harness.** The memory toggle allows manual side-by-side comparison only.
 
-## 🔮 Customer Insights
+## Roadmap
 
-Use memory reflection capabilities to identify:
+- Shared, organization-level playbook of proven fixes, kept separate from personal customer banks
+- Reflection over a customer's history to surface recurring issues and escalation candidates
+- Ticketing integrations (Zendesk, Freshdesk, Jira Service Management)
+- Human escalation when the same issue repeats after previous fixes failed
 
-* Recurring customer issues
-* Frequently successful solutions
-* Communication preferences
-* Repeated unresolved problems
-* Potential escalation cases
+## Built with
 
----
+Python, [Streamlit](https://streamlit.io), [Groq](https://groq.com) (`openai/gpt-oss-120b`), and [Hindsight](https://hindsight.vectorize.io/) by Vectorize. See also [what agent memory is](https://vectorize.io/what-is-agent-memory).
 
-## 🎫 Ticketing System Integration
+Built for HackWithHyderabad 3.0 by [Vikas Chinthala](https://github.com/chintalavikas).
 
-Future versions could connect with real customer-support platforms such as:
+## License
 
-* Zendesk
-* Freshdesk
-* Jira Service Management
-
-This would allow the agent to retrieve and update real support tickets.
-
----
-
-## 👨‍💼 Human Escalation
-
-Repeated unresolved problems could trigger human-support escalation.
-
-```text
-Repeated issue
-      +
-Previous fixes unsuccessful
-      ↓
-Escalation recommendation
-      ↓
-Human support agent
-```
-
----
-
-# 🎯 Design Philosophy
-
-The goal is not to replace human support agents.
-
-The goal is to give an AI support agent **useful long-term memory** so that customers do not have to repeatedly explain the same problems.
-
-> **Don't make the customer repeat what the AI should remember.**
-
----
-
-# 🏆 HackWithHyderabad 3.0
-
-This project was developed for **HackWithHyderabad 3.0** to demonstrate how persistent AI memory can improve customer-support experiences.
-
-### Core Concept
-
-```text
-Traditional Support AI
-
-Customer → Question → AI → Answer
-                         ↓
-                    Starts over
-
-
-Memory-Enabled Support AI
-
-Customer → Question
-              ↓
-        Recall History
-              ↓
-        Relevant Context
-              ↓
-             LLM
-              ↓
-     Personalized Answer
-              ↓
-        Retain Interaction
-```
-
----
-
-# 👨‍💻 Author
-
-**Vikas Chinthala**
-
-GitHub: [@chintalavikas](https://github.com/chintalavikas)
-
----
-
-## ⭐ Project Highlights
-
-**Persistent Memory**
-The agent can recall relevant customer history instead of starting every interaction from zero.
-
-**Personalization**
-Different customers can receive responses based on their individual history and preferences.
-
-**Transparent Retrieval**
-The Recalled Memories section makes the retrieved context visible during the demonstration.
-
-**Continuous Memory**
-New interactions and confirmed outcomes can become part of future customer context.
-
----
-
-## 📜 License
-
-This project is intended for educational and hackathon demonstration purposes.
+No license file has been added yet. Add one (MIT is a common choice) before inviting outside use.
