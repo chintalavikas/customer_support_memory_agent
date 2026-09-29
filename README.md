@@ -70,6 +70,17 @@ Pick a customer in the sidebar. The sidebar also shows a suggested first message
 | Rahul Mehta | Starter plan, iOS app; new to the product | "I can't log in on my phone again, it just keeps looping." | Past Keychain fix and step-by-step instructions with exact menu names |
 | Ananya Rao | IT admin, Enterprise with 4-hour SLA, Okta SSO | "New hires aren't showing up in CloudDesk after we add them in Okta." | Past SCIM delay and SSO certificate issue, and her request for proactive status updates |
 
+<img width="958" height="530" alt="Screenshot 2026-09-28 204916" src="https://github.com/user-attachments/assets/691c69f2-64d1-405f-b332-e08d391254ee" />
+<img width="959" height="527" alt="Screenshot 2026-09-28 205323" src="https://github.com/user-attachments/assets/58ba9794-f575-41d8-8ef0-fb657c8d150d" />
+<img width="958" height="522" alt="Screenshot 2026-09-28 205346" src="https://github.com/user-attachments/assets/3ec1a89d-1e35-4309-bf38-f0c86960c144" />
+<img width="209" height="187" alt="Screenshot 2026-09-28 205358" src="https://github.com/user-attachments/assets/c3f81e57-515f-4804-9f4d-b3dfa516195e" />
+<img width="957" height="533" alt="Screenshot 2026-09-28 205540" src="https://github.com/user-attachments/assets/e6c6ae7a-acd3-463c-93f3-c878283202f2" />
+
+
+
+
+
+
 A good walkthrough:
 
 1. Choose Priya, turn **Use Hindsight memory** off, and send her message. Note the generic answer.
