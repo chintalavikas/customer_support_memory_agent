@@ -1,4 +1,4 @@
-# One Memory Bank Per Customer: Building a Support Agent That Remembers What Actually Worked
+# Building Customer Support memory agent AI That Remembers With Hindsight
 
 The most expensive sentence in customer support is "Can you tell me what you've already tried?" I built a support agent whose job is to never say it to someone who has already told us.
 
