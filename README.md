@@ -119,7 +119,7 @@ seed_data.py   Synthetic customers, tickets, and suggested messages
 
 Python, [Streamlit](https://streamlit.io), [Groq](https://groq.com) (`openai/gpt-oss-120b`), and [Hindsight](https://hindsight.vectorize.io/) by Vectorize. See also [what agent memory is](https://vectorize.io/what-is-agent-memory).
 
-Built for HackWithHyderabad 3.0 by [Vikas Chinthala](https://github.com/chintalavikas).
+Built by [Vikas Chinthala](https://github.com/chintalavikas).
 
 ## License
 
